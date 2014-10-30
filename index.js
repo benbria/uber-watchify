@@ -15,7 +15,7 @@ function watchify (b, opts) {
     var watch = !!opts.watch;
     var cache = b._options.cache || (function(){
         try {
-            var c = fs.readFileSync(cacheFile);
+            var c = require(cacheFile);
             b._options.cache = c;
             return c;
         } catch (err) {
@@ -157,11 +157,19 @@ function watchify (b, opts) {
         });
     };
 
+    // TODO
+    // Create an all encompassing stream-json-to-file. If one of the json's properties exceeds the
+    // v8 memory limit, this will still die.
     b.write = function(opts, cb) {
         if (!opts) opts = {};
-        var sync = opts.sync || true;
-        var writeFn = !sync && typeof(cb) === 'function' ? fs.writeFile : fs.writeFileSync;
-        writeFn(cacheFile, JSON.stringify(cache), {}, cb);
+        fs.writeFileSync(cacheFile, "{");
+        for (var prop in cache) {
+            if (cache.hasOwnProperty(prop)) {
+                else fs.appendFileSync(cacheFile, ",");
+                fs.appendFileSync(cacheFile, JSON.stringify(prop) + ":" + JSON.stringify(cache[prop]))
+            }
+        }
+        fs.appendFileSync(cacheFile, "}");
     }
 
     var _bundle = b.bundle;
