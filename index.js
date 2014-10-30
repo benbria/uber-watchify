@@ -8,20 +8,19 @@ module.exports = watchify;
 module.exports.args = {
     cache: {}, packageCache: {}, fullPaths: true
 };
+module.exports.getCache = function(cacheFile) {
+    try {
+        return require(cacheFile);
+    } catch (err) {
+        return {};
+    }
+}
 
-function watchify (b, opts) {
+function watchify(b, opts) {
     if (!opts) opts = {};
     var cacheFile = opts.cacheFile;
     var watch = !!opts.watch;
-    var cache = b._options.cache || (function(){
-        try {
-            var c = require(cacheFile);
-            b._options.cache = c;
-            return c;
-        } catch (err) {
-            return {};
-        }
-    })();
+    var cache = b._options.cache;
     var pkgcache = b._options.packageCache;
     var changingDeps = {};
     var pending = false;
@@ -68,7 +67,7 @@ function watchify (b, opts) {
         b.removeListener('reset', reset);
     }
 
-    function reset () {
+    function reset() {
         var time = null;
         var bytes = 0;
         b.pipeline.get('record').on('end', function () {
@@ -95,14 +94,14 @@ function watchify (b, opts) {
     var fwatchers = {};
     var fwatcherFiles = {};
 
-    function watchFile (file) {
+    function watchFile(file) {
         fs.lstat(file, function (err, stat) {
             if (err || stat.isDirectory()) return;
             watchFile_(file);
         });
     }
 
-    function watchFile_ (file) {
+    function watchFile_(file) {
         if (!fwatchers[file]) fwatchers[file] = [];
         if (!fwatcherFiles[file]) fwatcherFiles[file] = [];
         if (fwatcherFiles[file].indexOf(file) >= 0) return;
@@ -130,7 +129,7 @@ function watchify (b, opts) {
         fwatcherFiles[mfile].push(file);
     }
 
-    function invalidate (id) {
+    function invalidate(id) {
         if (cache) delete cache[id];
         if (fwatchers[id]) {
             fwatchers[id].forEach(function (w) {
@@ -151,7 +150,7 @@ function watchify (b, opts) {
         pending = true;
     }
 
-    b.close = function () {
+    b.close = function() {
         Object.keys(fwatchers).forEach(function (id) {
             fwatchers[id].forEach(function (w) { w.close(); });
         });
@@ -163,8 +162,10 @@ function watchify (b, opts) {
     b.write = function(opts, cb) {
         if (!opts) opts = {};
         fs.writeFileSync(cacheFile, "{");
+        var first = true;
         for (var prop in cache) {
             if (cache.hasOwnProperty(prop)) {
+                if (first) first = false;
                 else fs.appendFileSync(cacheFile, ",");
                 fs.appendFileSync(cacheFile, JSON.stringify(prop) + ":" + JSON.stringify(cache[prop]))
             }
@@ -182,7 +183,6 @@ function watchify (b, opts) {
             listen();
         }
         return _bundle.call(b).on('end', function() {
-            console.log('Got the end event on the bundle stream');
             if (!watch) {
                 stopListening();
             }
