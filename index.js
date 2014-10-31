@@ -14,22 +14,30 @@ module.exports.getCache = function(cacheFile) {
     } catch (err) {
         return {};
     }
-}
+};
 
 function watchify(b, opts) {
     if (!opts) opts = {};
     var cacheFile = opts.cacheFile;
     var watch = !!opts.watch;
-    var cache = b._options.cache;
+    var cache = b._options.cache || {};
+    if (!cache._files) cache._files = {};
+    if (!cache._time) cache._time = {};
+    var invalid = false;
     var pkgcache = b._options.packageCache;
     var changingDeps = {};
     var pending = false;
     if (watch) listen();
     reset();
+    update();
 
     function dep(dep) {
         if (typeof dep.id === 'string') {
-            cache[dep.id] = dep;
+            fs.stat(dep.file, function(err, stats) {
+                cache[dep.id] = dep;
+                cache._files[dep.file] = dep.id;
+                cache._time[dep.file] = stats.mtime.getTime();
+            });
         }
         if ((typeof dep.file === 'string') && watch) {
             watchFile(dep.file);
@@ -129,8 +137,51 @@ function watchify(b, opts) {
         fwatcherFiles[mfile].push(file);
     }
 
+    function cacheEmpty(cache) {
+        var entries = (function() {
+            var keys = Object.keys(cache);
+            var results = [];
+            for (var i = 0; i < keys.length; i++) {
+                var entry = keys[i];
+                if (entry !== '_time' && entry !== '_files') {
+                    results.push(entry);
+                }
+            }
+            return results;
+        })();
+        return entries.length === 0;
+    }
+
+    function cleanEntry(id, file) {
+        delete cache._files[file];
+        delete cache._time[file];
+        delete cache[id];
+        return;
+    }
+
+    function update() {
+        if (cacheEmpty(cache)) {
+          invalid = true;
+          return;
+        }
+
+        invalid = false;
+
+        Object.keys(cache._time).forEach(function(file) {
+            var stats = fs.statSync(file);
+            if (cache._time[file] !== stats.mtime.getTime()) {
+                b.emit('log', 'Watchify cache: dep updated ' + path.basename(file));
+                cleanEntry(cache._files[file], file);
+                invalid = true;
+            }
+        });
+    }
+
     function invalidate(id) {
-        if (cache) delete cache[id];
+        if (cache) {
+            cleanEntry(id, cache[id].file);
+            invalid = true;
+        }
         if (fwatchers[id]) {
             fwatchers[id].forEach(function (w) {
                 w.close();
@@ -159,19 +210,19 @@ function watchify(b, opts) {
     // TODO
     // Create an all encompassing stream-json-to-file. If one of the json's properties exceeds the
     // v8 memory limit, this will still die.
-    b.write = function(opts, cb) {
+    b.write = function(opts) {
         if (!opts) opts = {};
-        fs.writeFileSync(cacheFile, "{");
+        fs.writeFileSync(cacheFile, '{');
         var first = true;
         for (var prop in cache) {
             if (cache.hasOwnProperty(prop)) {
                 if (first) first = false;
-                else fs.appendFileSync(cacheFile, ",");
-                fs.appendFileSync(cacheFile, JSON.stringify(prop) + ":" + JSON.stringify(cache[prop]))
+                else fs.appendFileSync(cacheFile, ',');
+                fs.appendFileSync(cacheFile, JSON.stringify(prop) + ':' + JSON.stringify(cache[prop]))
             }
         }
-        fs.appendFileSync(cacheFile, "}");
-    }
+        fs.appendFileSync(cacheFile, '}');
+    };
 
     var _bundle = b.bundle;
 
@@ -179,15 +230,31 @@ function watchify(b, opts) {
     // cache without having to have listeners on all the time. So we turn on the above event listeners
     // only while bundling and emitting.
     b.bundle = function() {
-        if (!watch) {
-            listen();
-        }
-        return _bundle.call(b).on('end', function() {
+        if (invalid) {
+            invalid = false;
             if (!watch) {
-                stopListening();
+                listen();
             }
-        });
-    }
+            return _bundle.call(b).on('end', function() {
+                if (!watch) {
+                    stopListening();
+                }
+            });
+        } else {
+            if (watch) {
+                setImmediate(function() {
+                    Object.keys(cache).forEach(function(key) {
+                        if (key === '_time' || key === '_files') return;
+                        watchFile(key);
+                    });
+                });
+                // set to true, because we didn't actual bundle anything yet, but want this
+                // set for the next `update`
+                b._bundled = true;
+            }
+            return null;
+        }
+    };
 
     return b;
 }
