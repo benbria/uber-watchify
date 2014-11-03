@@ -6,7 +6,7 @@ var chokidar = require('chokidar');
 
 module.exports = watchify;
 module.exports.args = {
-    cache: {}, packageCache: {}, fullPaths: true
+    cache: {}, packageCache: {}, fullPaths: true, watch: true
 };
 module.exports.getCache = function(cacheFile) {
     try {
@@ -19,7 +19,7 @@ module.exports.getCache = function(cacheFile) {
 function watchify(b, opts) {
     if (!opts) opts = {};
     var cacheFile = opts.cacheFile;
-    var watch = !!opts.watch;
+    var watch = typeof(opts.watch) !== 'undefined' ? opts.watch : module.exports.args.watch;
     var cache = b._options.cache || {};
     if (!cache._files) cache._files = {};
     if (!cache._time) cache._time = {};
@@ -211,17 +211,21 @@ function watchify(b, opts) {
     // Create an all encompassing stream-json-to-file. If one of the json's properties exceeds the
     // v8 memory limit, this will still die.
     b.write = function(opts) {
-        if (!opts) opts = {};
-        fs.writeFileSync(cacheFile, '{');
-        var first = true;
-        for (var prop in cache) {
-            if (cache.hasOwnProperty(prop)) {
-                if (first) first = false;
-                else fs.appendFileSync(cacheFile, ',');
-                fs.appendFileSync(cacheFile, JSON.stringify(prop) + ':' + JSON.stringify(cache[prop]))
+        try {
+            if (!opts) opts = {};
+            fs.writeFileSync(cacheFile, '{');
+            var first = true;
+            for (var prop in cache) {
+                if (cache.hasOwnProperty(prop)) {
+                    if (first) first = false;
+                    else fs.appendFileSync(cacheFile, ',');
+                    fs.appendFileSync(cacheFile, JSON.stringify(prop) + ':' + JSON.stringify(cache[prop]))
+                }
             }
+            fs.appendFileSync(cacheFile, '}');
+        } catch (err) {
+            b.emit('log', 'Erroring writing cache file ', + err.message);
         }
-        fs.appendFileSync(cacheFile, '}');
     };
 
     var _bundle = b.bundle;

@@ -16,7 +16,6 @@ if (!outfile) {
     process.exit(1);
 }
 var dotfile = path.join(path.dirname(outfile), '.' + path.basename(outfile));
-
 w.on('update', bundle);
 bundle();
 
@@ -29,11 +28,9 @@ function bundle () {
         })
     });
     wb.pipe(fs.createWriteStream(dotfile));
-    
     var bytes, time;
     w.on('bytes', function (b) { bytes = b });
     w.on('time', function (t) { time = t });
-    
     wb.on('end', function () {
         fs.rename(dotfile, outfile, function (err) {
             if (err) return console.error(err);
@@ -42,6 +39,7 @@ function bundle () {
                     + ' (' + (time / 1000).toFixed(2) + ' seconds)'
                 );
             }
+            w.write();
         });
     });
 }
