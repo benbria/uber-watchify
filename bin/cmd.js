@@ -21,6 +21,11 @@ bundle();
 
 function bundle () {
     var wb = w.bundle();
+    // cache is still valid, don't need to bundle the first go.
+    if (!wb) {
+        if (verbose) console.log('Watchify cache still valid. Nothing built.');
+        return;
+    }
     wb.on('error', function (err) {
         console.error(String(err));
         fs.writeFile(outfile, 'console.error('+JSON.stringify(String(err))+')', function(err) {

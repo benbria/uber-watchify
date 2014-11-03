@@ -7,7 +7,9 @@ process.argv.slice(3).forEach(function(arg, i, args) {
     if (arg === '-n' || args === '--no-watch') {
         superArgs.watch = false;
     } else if (arg === '-cf' || arg === '--cache-file') {
-        superArgs.cache = watchify.getCache(args[i + 1]);
+        var cacheFile = args[i + 1];
+        superArgs.cacheFile = cacheFile;
+        superArgs.cache = watchify.getCache(cacheFile);
     }
 });
 
