@@ -14,6 +14,6 @@ process.argv.slice(3).forEach(function(arg, i, args) {
 module.exports = function (args) {
     return watchify(fromArgs(
         process.argv.slice(2),
-        extend(watchify.args, superArgs)
+        extend(watchify.args(), superArgs)
     ), superArgs);
 };

@@ -5,8 +5,8 @@ var path = require('path');
 var chokidar = require('chokidar');
 
 module.exports = watchify;
-module.exports.args = {
-    cache: {}, packageCache: {}, fullPaths: true, watch: true
+module.exports.args = function() {
+    return { cache: {}, packageCache: {}, fullPaths: true, watch: true };
 };
 module.exports.getCache = function(cacheFile) {
     try {
@@ -19,7 +19,7 @@ module.exports.getCache = function(cacheFile) {
 function watchify(b, opts) {
     if (!opts) opts = {};
     var cacheFile = opts.cacheFile;
-    var watch = typeof(opts.watch) !== 'undefined' ? opts.watch : module.exports.args.watch;
+    var watch = typeof(opts.watch) !== 'undefined' ? opts.watch : module.exports.args().watch;
     var cache = b._options.cache || {};
     if (!cache._files) cache._files = {};
     if (!cache._time) cache._time = {};
@@ -178,10 +178,10 @@ function watchify(b, opts) {
     }
 
     function invalidate(id) {
-        if (cache) {
+        if (cache && cache[id]) {
             cleanEntry(id, cache[id].file);
-            invalid = true;
         }
+        invalid = true;
         if (fwatchers[id]) {
             fwatchers[id].forEach(function (w) {
                 w.close();
@@ -233,17 +233,22 @@ function watchify(b, opts) {
     // Override browserify's bundle. We want to support loading, updating, and persisting the
     // cache without having to have listeners on all the time. So we turn on the above event listeners
     // only while bundling and emitting.
-    b.bundle = function() {
+    b.bundle = function(cb) {
         if (invalid) {
             invalid = false;
             if (!watch) {
                 listen();
             }
-            return _bundle.call(b).on('end', function() {
-                if (!watch) {
-                    stopListening();
-                }
-            });
+            if (typeof(cb) === 'function') {
+                return _bundle.call(b, cb);
+            }
+            else {
+                return _bundle.call(b).on('end', function() {
+                    if (!watch) {
+                        stopListening();
+                    }
+                });
+            }
         } else {
             if (watch) {
                 setImmediate(function() {
@@ -256,7 +261,11 @@ function watchify(b, opts) {
                 // set for the next `update`
                 b._bundled = true;
             }
-            return null;
+            if (typeof(cb) === 'function') {
+                cb(new Error('Cache is still valid.'), null);
+            } else {
+                return null;
+            }
         }
     };
 
