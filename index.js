@@ -33,11 +33,10 @@ function watchify(b, opts) {
 
     function dep(dep) {
         if (typeof dep.id === 'string') {
-            fs.stat(dep.file, function(err, stats) {
-                cache[dep.id] = dep;
-                cache._files[dep.file] = dep.id;
-                cache._time[dep.file] = stats.mtime.getTime();
-            });
+            var stats = fs.statSync(dep.file);
+            cache[dep.id] = dep;
+            cache._files[dep.file] = dep.id;
+            cache._time[dep.file] = stats.mtime.getTime();
         }
         if ((typeof dep.file === 'string') && watch) {
             watchFile(dep.file);
