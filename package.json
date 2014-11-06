@@ -1,7 +1,7 @@
 {
-  "name": "watchify",
+  "name": "uber-watchify",
   "version": "2.0.0",
-  "description": "watch mode for browserify builds",
+  "description": "watchify, with some bonus features. Forked@2.0.0",
   "main": "index.js",
   "bin": "bin/cmd.js",
   "dependencies": {
@@ -21,21 +21,27 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/substack/watchify.git"
+    "url": "git://github.com/benbria/uber-watchify.git"
   },
-  "homepage": "https://github.com/substack/watchify",
+  "homepage": "https://github.com/benbria/uber-watchify",
   "keywords": [
     "browserify",
     "browserify-tool",
     "watch",
     "bundle",
     "build",
-    "browser"
+    "browser",
+    "cache"
   ],
   "author": {
-    "name": "James Halliday",
-    "email": "mail@substack.net",
-    "url": "http://substack.net"
+    "name": "Benbria",
+    "email": "support@benbria.com",
+    "url": "benbria.com"
   },
+  "contributors": [
+    "Calvin Wiebe <calvin.wiebe@gmail.com> (https://github.com/calvinwiebe)",
+    "Shay Bergmann <shaybergmann@gmail.com> (https://github.com/kreisys)",
+    "James Halliday <mail@substack.net> (http://substack.net)"
+  ],
   "license": "MIT"
 }

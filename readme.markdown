@@ -1,119 +1,89 @@
-# watchify
+# uber-watchify
 
-watch mode for browserify builds
+[watchify](https://github.com/substack/watchify), with some bonus features.
 
-[![build status](https://secure.travis-ci.org/substack/watchify.png)](http://travis-ci.org/substack/watchify)
+`watchify` does some great stuff. `uber-watchify` takes it one step further. For big bundles,
+with lots of transforms, the bundling takes a long time (with jQuery and tranforms we are talking around
+30 seconds). If you have incorporated watchify into your build system, and have it run on every start up,
+this can be costly. Watchify already uses browserify's internal cache, but it only does so in memory. `uber-watchify`
+attempts to solve this problem by persisting the cache to disk.
 
-Update any source file and your browserify bundle will be recompiled on the
-spot.
+# additions
+
+1. Load/Write a cache file
+
+accept a new option to load/write a pre-existing cache file, namely, `cacheFile`. Therefore, first builds run off the cache, as
+well as subsequent ones. Provide a method `w.write()`, which at the user's discretion, will write out the cache to disk.
+
+2. Add an explicit `watch` option
+
+original watchify _always_ watches. If you don't want to write a separate task, and also use uber-watchify for just
+regular build commands, you can turn off the watching so the process exits.
+
+3. If nothing changed, do nothing.
+
+If you start a build, kill the process, and restart it while nothing in browserify has changed, don't do anything.
+`w.bundle()` will now check all the modification times of the files you are bundling. If nothing has changed, `w.bundle()` will
+simply return `null`.
 
 # example
 
-Use `watchify` with all the same arguments as `browserify` except that
-`-o` is mandatory:
+```javascript
+var cacheFile = path.resolve(__dirname, 'browserify/benbria.cache.json');
+var w = watchify(browserify({
+    cache: watchify.getCache(cacheFile),
+    packageCache: {},
+    fullPaths: true,
+    entries: [path.resolve(__dirname, 'browserify/benbria.coffee')],
+    extensions: ['.js']
+}), {
+    cacheFile: cacheFile
+});
 
 ```
-$ watchify main.js -o static/bundle.js
+
+then to watch:
+
+```javascript
+var bundle = function() {
+    var stream = w.bundle();
+    if (!stream) {
+        return;
+    }
+    stream
+    .pipe(source('bundle.js'))
+    .pipe(gulp.dest('browserify'))
+    .on('end', function() {
+        w.write();
+    });
+};
+w.on('update', bundle);
+bundle();
 ```
 
-Now as you update files, `static/bundle.js` will be automatically re-compiled on
-the fly.
+# new api changes
 
-You can use `-v` to get more verbose output to show when a file was written and how long the bundling took (in seconds):
+## option `cacheFile`
 
-```
-$ watchify browser.js -d -o static/bundle.js -v
-610598 bytes written to static/bundle.js  0.23s
-610606 bytes written to static/bundle.js  0.10s
-610597 bytes written to static/bundle.js  0.14s
-610606 bytes written to static/bundle.js  0.08s
-610597 bytes written to static/bundle.js  0.08s
-610597 bytes written to static/bundle.js  0.19s
-```
+A full path to the cache file you wish to save to. It will be created if it doesn't exist
 
-# usage
+## option `watch`
 
-All the bundle options are the same as the browserify command except for `-v`.
+Whether to setup watch listeners. Defaults to `true`
 
-# methods
+## method `watchify.getCache(file)`
 
-``` js
-var watchify = require('watchify');
-var fromArgs = require('watchify/bin/args');
-```
+convenience method to load a `json` cache file, and if it doesn't exist will give you a blank object.
+Pass this to browserify's `cache` option.
 
-## var w = watchify(b, opts)
+## method `w.write()`
 
-Wrap a browserify bundle `b` with watchify, returning the wrapped bundle
-instance as `w`.
+write out the cache to the specified `cacheFile`. Generally you do this once your transform stream gets its `end`
+event.
 
-When creating the browserify instance `b` you MUST set these properties in the
-constructor:
+## api `w.bundle([cb])`
 
-``` js
-var b = browserify({ cache: {}, packageCache: {}, fullPaths: true })
-```
-
-You can also just do:
-
-``` js
-var b = browserify(watchify.args)
-```
-
-`w` is exactly like a browserify bundle except that caches file contents and
-emits an `'update'` event when a file changes. You should call `w.bundle()`
-after the `'update'` event fires to generate a new bundle. Calling `w.bundle()`
-extra times past the first time will be much faster due to caching.
-
-## w.close()
-
-Close all the open watch handles.
-
-## var w = fromArgs(args)
-
-Create a watchify instance `w` from an array of arguments `args`. The required
-constructor parameters will be set up automatically.
-
-# events
-
-## w.on('update', function (ids) {})
-
-When the bundle changes, emit the array of bundle `ids` that changed.
-
-## w.on('bytes', function (bytes) {})
-
-When a bundle is generated, this event fires with the number of bytes.
-
-## w.on('time', function (time) {})
-
-When a bundle is generated, this event fires with the time it took to create the
-bundle in milliseconds.
-
-## w.on('log', function (msg) {})
-
-This event fires to with messages of the form:
-
-```
-X bytes written (Y seconds)
-```
-
-with the number of bytes in the bundle X and the time in seconds Y.
-
-# install
-
-With [npm](https://npmjs.org) do:
-
-```
-$ npm install -g watchify
-```
-
-to get the watchify command and:
-
-```
-$ npm install watchify
-```
-
-to get just the library.
+same as before, but will now return `null` if the cache is still valid. (a new cache is invalid)
 
 # license
 
