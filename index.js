@@ -167,9 +167,19 @@ function watchify(b, opts) {
         invalid = false;
 
         Object.keys(cache._time).forEach(function(file) {
-            var stats = fs.statSync(file);
-            if (cache._time[file] !== stats.mtime.getTime()) {
-                b.emit('log', 'Watchify cache: dep updated ' + path.basename(file));
+            var doClean = false;
+            if (!fs.existsSync(file)) {
+                b.emit('log', 'Watchify cache: dep no longer exists ' + path.basename(file));
+                doClean = true
+            }
+            else {
+                var stats = fs.statSync(file);
+                if (cache._time[file] !== stats.mtime.getTime()) {
+                    b.emit('log', 'Watchify cache: dep updated ' + path.basename(file));
+                    doClean = true
+                }
+            }
+            if (doClean) {
                 cleanEntry(cache._files[file], file);
                 invalid = true;
             }
