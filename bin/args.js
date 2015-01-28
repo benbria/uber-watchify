@@ -4,7 +4,7 @@ var extend      = require('xtend');
 var superArgs   = {}
 
 process.argv.slice(3).forEach(function(arg, i, args) {
-    if (arg === '-n' || args === '--no-watch') {
+    if (arg === '-n' || arg === '--no-watch') {
         superArgs.watch = false;
     } else if (arg === '-cf' || arg === '--cache-file') {
         var cacheFile = args[i + 1];

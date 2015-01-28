@@ -85,6 +85,20 @@ event.
 
 same as before, but will now return `null` if the cache is still valid. (a new cache is invalid)
 
+# new cli options
+
+## --cache-file or -cf
+
+A full path to the cache file you wish to save to. It will be created if it doesn't exist
+
+## --no-watch or -n
+
+Whether to setup watch listeners. Defaults to `true`
+
+# example
+
+`>uber-watchify main.js --no-watch --cache-file main.browserify.cache.json -o bundle.js`
+
 # license
 
 MIT
