@@ -1,12 +1,12 @@
 {
   "name": "uber-watchify",
-  "version": "2.0.1",
+  "version": "2.3.0",
   "description": "watchify, with some bonus features. Forked@2.0.0",
   "main": "index.js",
   "bin": "bin/cmd.js",
   "dependencies": {
-    "browserify": "^5.5.0",
-    "chokidar": "~0.8.2",
+    "browserify": "^7.0.0",
+    "chokidar": "~0.12.1",
     "through2": "~0.5.1",
     "xtend": "^4.0.0"
   },
