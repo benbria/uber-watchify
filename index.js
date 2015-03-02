@@ -1,8 +1,9 @@
 'use strict';
-var through = require('through2');
-var fs = require('fs');
-var path = require('path');
-var chokidar = require('chokidar');
+var through = require('through2'),
+fs          = require('fs'),
+path        = require('path'),
+chokidar    = require('chokidar'),
+mkdirp      = require('mkdirp');
 
 module.exports = watchify;
 module.exports.args = function() {
@@ -223,6 +224,9 @@ function watchify(b, opts) {
     // v8 memory limit, this will still die.
     b.write = function(opts) {
         try {
+            if (!fs.existsSync(path.dirname(cacheFile))) {
+                mkdirp.sync(path.dirname(cacheFile));
+            }
             if (!opts) opts = {};
             fs.writeFileSync(cacheFile, '{');
             var first = true;
