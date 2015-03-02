@@ -235,7 +235,7 @@ function watchify(b, opts) {
             }
             fs.appendFileSync(cacheFile, '}');
         } catch (err) {
-            b.emit('log', 'Erroring writing cache file ', + err.message);
+            b.emit('log', 'Erroring writing cache file ' + err.message);
         }
     };
 
