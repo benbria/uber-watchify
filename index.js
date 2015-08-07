@@ -17,6 +17,23 @@ module.exports.getCache = function(cacheFile) {
     }
 };
 
+function resolveStats(id, b) {
+    var stats;
+    try {
+        stats = fs.statSync(id);
+    } catch (err) {
+        b.emit('log', 'Failed initial statSync of ' + id);
+        var basedir = b._options.basedir || process.cwd();
+        try {
+            stats = fs.statSync(b._bresolve.sync(id, {basedir: basedir}));
+        } catch (err) {
+            b.emit('log', 'Failed second statSync of ' + id + '. Not caching.');
+        }
+    } finally {
+        return stats;
+    }
+};
+
 function watchify(b, opts) {
     if (!opts) opts = {};
     var cacheFile = opts.cacheFile;
@@ -34,7 +51,8 @@ function watchify(b, opts) {
 
     function dep(dep) {
         if (typeof dep.id === 'string') {
-            var stats = fs.statSync(dep.file);
+            var stats = resolveStats(dep.id, b);
+            if (!stats) return;
             cache[dep.id] = dep;
             cache._files[dep.file] = dep.id;
             cache._time[dep.file] = stats.mtime.getTime();
@@ -170,21 +188,10 @@ function watchify(b, opts) {
         invalid = false;
 
         Object.keys(cache._time).forEach(function(file) {
-            var doClean = false;
-            if (!fs.existsSync(file)) {
-                b.emit('log', 'Watchify cache: dep no longer exists ' + path.basename(file));
-                doClean = true
-            }
-            else {
-                var stats = fs.statSync(file);
-                if (cache._time[file] !== stats.mtime.getTime()) {
-                    b.emit('log', 'Watchify cache: dep updated ' + path.basename(file));
-                    doClean = true
-                }
-            }
-            if (doClean) {
+            var stats = resolveStats(file, b);
+            if (!stats || cache._time[file] !== stats.mtime.getTime()) {
+                b.emit('log', 'Watchify cache: dep updated or removed: ' + path.basename(file));
                 cleanEntry(cache._files[file], file);
-                invalid = true;
             }
         });
     }
