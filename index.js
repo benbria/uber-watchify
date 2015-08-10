@@ -3,7 +3,9 @@ var through = require('through2'),
 fs          = require('fs'),
 path        = require('path'),
 chokidar    = require('chokidar'),
-mkdirp      = require('mkdirp');
+mkdirp      = require('mkdirp'),
+resolve     = require('resolve'),
+bresolve    = require('browser-resolve');
 
 module.exports = watchify;
 module.exports.args = function() {
@@ -14,6 +16,29 @@ module.exports.getCache = function(cacheFile) {
         return require(cacheFile);
     } catch (err) {
         return {};
+    }
+};
+
+function nodeResolve(id, opts, cb) {
+    if (!opts.basedir) opts.basedir = path.dirname(opts.filename);
+    resolve(id, opts, cb);
+}
+
+function resolveStats(id, b) {
+    var stats;
+    var resolve = b._bresolve ? b._bresolve : b._options.browserField === false ? nodeResolve : bresolve;
+    try {
+        stats = fs.statSync(id);
+    } catch (err) {
+        b.emit('log', 'Resolving shorthanded id:  ' + id);
+        var basedir = b._options.basedir || process.cwd();
+        try {
+            stats = fs.statSync(resolve.sync(id, {basedir: basedir}));
+        } catch (err) {
+            b.emit('log', 'Failed resolution of ' + id + '. Not caching.');
+        }
+    } finally {
+        return stats;
     }
 };
 
@@ -34,7 +59,8 @@ function watchify(b, opts) {
 
     function dep(dep) {
         if (typeof dep.id === 'string') {
-            var stats = fs.statSync(dep.file);
+            var stats = resolveStats(dep.file, b);
+            if (!stats) return;
             cache[dep.id] = dep;
             cache._files[dep.file] = dep.id;
             cache._time[dep.file] = stats.mtime.getTime();
@@ -163,26 +189,16 @@ function watchify(b, opts) {
 
     function update() {
         if (cacheEmpty(cache)) {
-          invalid = true;
-          return;
+            invalid = true;
+            return;
         }
 
         invalid = false;
 
         Object.keys(cache._time).forEach(function(file) {
-            var doClean = false;
-            if (!fs.existsSync(file)) {
-                b.emit('log', 'Watchify cache: dep no longer exists ' + path.basename(file));
-                doClean = true
-            }
-            else {
-                var stats = fs.statSync(file);
-                if (cache._time[file] !== stats.mtime.getTime()) {
-                    b.emit('log', 'Watchify cache: dep updated ' + path.basename(file));
-                    doClean = true
-                }
-            }
-            if (doClean) {
+            var stats = resolveStats(file, b);
+            if (!stats || cache._time[file] !== stats.mtime.getTime()) {
+                b.emit('log', 'Watchify cache: dep updated or removed: ' + path.basename(file));
                 cleanEntry(cache._files[file], file);
                 invalid = true;
             }
