@@ -2,11 +2,6 @@
 
 [watchify](https://github.com/substack/watchify), with some bonus features.
 
-## NOTICE: uber-watchify is currently broken with browserify 9.0.8
-
-If you're running into trouble, then downgrade your browserify to 9.0.7.  Details [here](https://github.com/substack/node-browserify/issues/1203).
-
-
 `watchify` does some great stuff. `uber-watchify` takes it one step further. For big bundles,
 with lots of transforms, the bundling takes a long time (with jQuery and tranforms we are talking around
 30 seconds). If you have incorporated watchify into your build system, and have it run on every start up,
