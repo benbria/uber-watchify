@@ -13,6 +13,7 @@ var tmpdir = path.join((os.tmpdir || os.tmpDir)(), 'watchify-' + Math.random());
 
 var fileOne = path.join(tmpdir, 'main.js');
 var fileTwo = path.join(tmpdir, 'foobar.js');
+var fileThree = path.join(tmpdir, 'null.js');
 
 mkdirp.sync(tmpdir);
 fs.writeFileSync(fileOne, 'console.log(123456)');
@@ -64,6 +65,24 @@ test('api cacheFile', function (t) {
                 t.ifError(err);
             });
         }, 1000);
+    });
+});
+
+fs.writeFileSync(fileThree, 'console.log("nope")');
+
+test('api no change null', function(t) {
+    t.plan(3);
+    var cacheFile = path.join(tmpdir, 'null.cache.json');
+    var w = watchify(browserify(fileThree, watchify.args()), {
+        cacheFile: cacheFile,
+        watch: false
+    });
+    var stream = w.bundle(function(err, src) {
+        t.ifError(err);
+        t.equal(run(src), 'nope\n');
+        w.close();
+        var stream = w.bundle();
+        t.equal(stream, null);
     });
 });
 

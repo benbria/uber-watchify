@@ -51,7 +51,7 @@ function watchify(b, opts) {
 
     function dep(dep) {
         if (typeof dep.id === 'string') {
-            var stats = resolveStats(dep.id, b);
+            var stats = resolveStats(dep.file, b);
             if (!stats) return;
             cache[dep.id] = dep;
             cache._files[dep.file] = dep.id;
@@ -181,8 +181,8 @@ function watchify(b, opts) {
 
     function update() {
         if (cacheEmpty(cache)) {
-          invalid = true;
-          return;
+            invalid = true;
+            return;
         }
 
         invalid = false;
@@ -192,6 +192,7 @@ function watchify(b, opts) {
             if (!stats || cache._time[file] !== stats.mtime.getTime()) {
                 b.emit('log', 'Watchify cache: dep updated or removed: ' + path.basename(file));
                 cleanEntry(cache._files[file], file);
+                invalid = true;
             }
         });
     }
