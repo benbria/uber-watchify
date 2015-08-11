@@ -39,6 +39,10 @@ function bundle () {
         : outpipe(outfile);
 
     var wb = w.bundle();
+    if (!wb) {
+        console.log('Watchify cache still valid, nothing to do');
+        return;
+    }
     wb.on('error', function (err) {
         console.error(String(err));
         didError = true;
@@ -55,5 +59,6 @@ function bundle () {
                 + ' (' + (time / 1000).toFixed(2) + ' seconds)'
             );
         }
+        w.write();
     });
 }

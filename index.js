@@ -51,7 +51,7 @@ function watchify (b, opts) {
     }
 
     function update() {
-        if (Object.keys(cache) === 2) {
+        if (Object.keys(cache).length === 2) {
             invalid = true;
             return;
         } else {
