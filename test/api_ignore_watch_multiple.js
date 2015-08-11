@@ -31,7 +31,7 @@ fs.writeFileSync(files.robot, 'module.exports = "robot";');
 
 test('api ignore watch multiple paths', function (t) {
     t.plan(4);
-    var w = watchify(browserify(files.main, watchify.args), {
+    var w = watchify(browserify(files.main, watchify.args()), {
         ignoreWatch: ['**/be*.js', '**/robot/*.js']
     });
     w.on('update', function () {

@@ -16,7 +16,7 @@ module.exports = function (args) {
     if (cache) {
         bopts.cache = cache;
     }
-    var b = fromArgs(args, xtend(watchify.args, bopts));
+    var b = fromArgs(args, xtend(watchify.args(), bopts));
 
     var opts = {};
     var ignoreWatch = defined(b.argv['ignore-watch'], b.argv.iw);

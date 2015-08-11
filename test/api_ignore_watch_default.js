@@ -31,7 +31,7 @@ fs.writeFileSync(files.robot, 'module.exports = "robot";');
 
 test('api ignore watch default', function (t) {
     t.plan(4);
-    var w = watchify(browserify(files.main, watchify.args), {
+    var w = watchify(browserify(files.main, watchify.args()), {
         ignoreWatch: true
     });
     w.on('update', function () {

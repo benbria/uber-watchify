@@ -17,7 +17,7 @@ fs.writeFileSync(file, 'console.log(555)');
 
 test('api', function (t) {
     t.plan(5);
-    var w = watchify(browserify(file, watchify.args));
+    var w = watchify(browserify(file, watchify.args()));
     w.on('update', function () {
         w.bundle(function (err, src) {
             t.ifError(err);

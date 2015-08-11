@@ -7,9 +7,11 @@ var mkdirp = require('mkdirp');
 var fs = require('fs');
 
 module.exports = watchify;
-module.exports.args = {
-    cache: {}, packageCache: {}
-};
+module.exports.args = function() {
+    return {
+        cache: {}, packageCache: {}
+    };
+}
 module.exports.getCache = function(cacheFile) {
     try {
         return require(cacheFile);
