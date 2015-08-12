@@ -9,9 +9,14 @@ var fs = require('fs');
 module.exports = watchify;
 module.exports.args = function() {
     return {
-        cache: {}, packageCache: {}
+        cache: {}, packageCache: {}, watch: true
     };
 }
+/**
+ * Utility method to load a json file. Failover to an empty object.
+ *
+ * @param `cacheFile` {String} - full path to the json file
+ */
 module.exports.getCache = function(cacheFile) {
     try {
         return require(cacheFile);
@@ -22,6 +27,7 @@ module.exports.getCache = function(cacheFile) {
 
 function watchify (b, opts) {
     if (!opts) opts = {};
+    var watch = opts.watch;
     var cacheFile = opts.cacheFile;
     var cache = b._options.cache || {};
     if (!cache._files) cache._files = {};
@@ -52,6 +58,10 @@ function watchify (b, opts) {
         collect();
     }
 
+    /**
+     * Walk through the dependency cache. If any dependency's modification time has changed, or the file has been
+     * removed, invalidate the cache and remove the entry.
+     */
     function update() {
         if (Object.keys(cache).length === 2) {
             invalid = true;
@@ -145,6 +155,7 @@ function watchify (b, opts) {
     });
 
     function watchFile (file, dep) {
+        if (!watch) return;
         dep = dep || file;
         if (ignored) {
             if (!ignoredFiles.hasOwnProperty(file)) {
@@ -211,6 +222,11 @@ function watchify (b, opts) {
         return chokidar.watch(file, opts);
     };
 
+    /**
+     * Will write the internal dependency cache to a file on the file system.
+     *
+     * @param `opts` {Object} - options object. Unused currently.
+     */
     b.write = function(opts) {
         try {
             if (!fs.existsSync(path.dirname(cacheFile))) {
@@ -232,14 +248,33 @@ function watchify (b, opts) {
         }
     };
 
+    // Save the reference to the real `bundle`
     var _bundle = b.bundle;
 
+    /**
+     * Override the browserify `bundle` function. We need to intercept the call to see if any bundling is really
+     * needed. When the cache is valid, we just return null. If `watch` is true, though, we setup the watchers on all
+     * the files in the cache. Otherwise we do the bundling.
+     *
+     * @param `cb` {Function} - optional callback
+     * @returns - either the stream from `_bundle` or `null` if the cache is valid.
+     */
     b.bundle = function(cb) {
         if (invalid) {
             invalid = false;
             var args = 'function' === typeof(cb) ? [cb] : [];
             return _bundle.apply(b, args);
         } else {
+            if (watch) {
+                setImmediate(function() {
+                    Object.keys(cache).forEach(function(key) {
+                        if (key !== '_time' && key !== '_files') watchFile(key);
+                    });
+                });
+                // set to true, because we didn't actual bundle anything yet, but want this
+                // set for the next `update`
+                b._bundled = true;
+            }
             if ('function' === typeof(cb)) {
                 b.emit('log', 'Cache is still valid');
                 cb();
