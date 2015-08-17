@@ -5,6 +5,7 @@ var xtend = require('xtend');
 var anymatch = require('anymatch');
 var mkdirp = require('mkdirp');
 var fs = require('fs');
+var writeJSONSync = require('jsonfile').writeFileSync;
 
 module.exports = watchify;
 module.exports.args = function() {
@@ -27,7 +28,7 @@ module.exports.getCache = function(cacheFile) {
 
 function watchify (b, opts) {
     if (!opts) opts = {};
-    var watch = typeof(opts.watch) !== 'undefined' ? opts.watch : module.exports.args().watch;
+    var watch = typeof opts.watch !== 'undefined' ? opts.watch : module.exports.args().watch;
     var cacheFile = opts.cacheFile;
     var cache = b._options.cache || {};
     if (!cache._files) cache._files = {};
@@ -223,30 +224,18 @@ function watchify (b, opts) {
     };
 
     /**
-     * Will write the internal dependency cache to a file on the file system.
-     *
-     * @param `opts` {Object} - options object. Unused currently.
+     * Write the internal dependency cache to a file on the file system.
      */
-    b.write = function(opts) {
+    b.write = function() {
         try {
             if (!fs.existsSync(path.dirname(cacheFile))) {
                 mkdirp.sync(path.dirname(cacheFile));
             }
-            if (!opts) opts = {};
-            fs.writeFileSync(cacheFile, '{');
-            var first = true;
-            for (var prop in cache) {
-                if (cache.hasOwnProperty(prop)) {
-                    if (first) first = false;
-                    else fs.appendFileSync(cacheFile, ',');
-                    fs.appendFileSync(cacheFile, JSON.stringify(prop) + ':' + JSON.stringify(cache[prop]))
-                }
-            }
-            fs.appendFileSync(cacheFile, '}');
+            writeJSONSync(cacheFile, cache);
         } catch (err) {
             b.emit('log', 'Erroring writing cache file ' + err.message);
         }
-    };
+    }
 
     // Save the reference to the real `bundle`
     var _bundle = b.bundle;
