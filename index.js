@@ -27,7 +27,7 @@ module.exports.getCache = function(cacheFile) {
 
 function watchify (b, opts) {
     if (!opts) opts = {};
-    var watch = opts.watch;
+    var watch = typeof(opts.watch) !== 'undefined' ? opts.watch : module.exports.args().watch;
     var cacheFile = opts.cacheFile;
     var cache = b._options.cache || {};
     if (!cache._files) cache._files = {};

@@ -26,7 +26,6 @@ fs.writeFileSync(files.lines, 'beep\nboop');
 test('api with brfs', function (t) {
     t.plan(5);
     var w = watchify(browserify(files.main, watchify.args()));
-    console.log(watchify.args)
     w.transform('brfs');
     w.on('update', function () {
         w.bundle(function (err, src) {
@@ -36,8 +35,6 @@ test('api with brfs', function (t) {
         });
     });
     w.bundle(function (err, src) {
-        console.log(err)
-        console.log(src)
         t.ifError(err);
         t.equal(run(src), 'BEEP\nBOOP\n');
         setTimeout(function () {
