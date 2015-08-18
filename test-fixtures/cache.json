@@ -1,0 +1,14 @@
+{
+  "_files": {
+    "index.js": "/tmp/index.js"
+  },
+  "_time": {
+    "index.js": 1439317977000
+  },
+  "index.js": {
+    "source": "require('./foo.js');\n",
+    "deps": {
+      "./foo.js": "/tmp/foo.js"
+    }
+  }
+}
