@@ -1,5 +1,8 @@
 # uber-watchify Changelog
 
+### v3.4.1
+  - add `-n` and `--no-watch` to command line interface. (Omitted in code reset)
+
 ### v3.4.0
   - Reset codebase to `watchify`@3.3.1
   - Added `uber-watchify` changes on top of 3.3.1
