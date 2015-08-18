@@ -1,6 +1,6 @@
 {
   "name": "uber-watchify",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "description": "watchify, with some bonus features. Forked@2.0.0",
   "main": "index.js",
   "bin": "bin/cmd.js",
