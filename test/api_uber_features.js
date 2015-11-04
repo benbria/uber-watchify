@@ -2,6 +2,8 @@ var test = require('tape');
 var watchify = require('../');
 var browserify = require('browserify');
 var vm = require('vm');
+var lessify = require('node-lessify');
+var xtend = require('xtend');
 
 var fs = require('fs');
 var path = require('path');
@@ -14,6 +16,10 @@ var tmpdir = path.join((os.tmpdir || os.tmpDir)(), 'watchify-' + Math.random());
 var fileOne = path.join(tmpdir, 'main.js');
 var fileTwo = path.join(tmpdir, 'foobar.js');
 var fileThree = path.join(tmpdir, 'null.js');
+var fileFour = path.join(tmpdir, 'less.js');
+
+var lessOne = path.join(tmpdir, 'less.less');
+var lessTwo = path.join(tmpdir, 'less2.less');
 
 mkdirp.sync(tmpdir);
 fs.writeFileSync(fileOne, 'console.log(123456)');
@@ -83,6 +89,69 @@ test('api no change null', function(t) {
         w.close();
         var stream = w.bundle();
         t.equal(stream, null);
+    });
+});
+
+fs.writeFileSync(fileFour, 'require("./less.less")');
+fs.writeFileSync(lessOne, '@import "./less2.less";');
+fs.writeFileSync(lessTwo, 'html { color: red; }');
+
+test('recompile transform dependents', function(t) {
+    t.plan(9);
+
+    var cacheFile = path.join(tmpdir, 'transform.cache.json');
+
+    var browserifyInstance = function() {
+        return watchify(
+            browserify(fileFour, xtend(watchify.args(), {
+                cache: watchify.getCache(cacheFile)
+            })),
+            {
+                cacheFile: cacheFile,
+                watch: false
+            }
+        )
+            .transform(lessify);
+    };
+
+    var w = browserifyInstance();
+
+    w.bundle(function (err, src) {
+        t.ifError(err);
+        t.notEqual(src.toString('utf8').indexOf('color:red'), -1);
+
+        w.close();
+        w.write();
+
+        setTimeout(function () {
+            fs.writeFile(lessTwo, 'html { color: green; }', function (err) {
+                t.ifError(err);
+
+                w = browserifyInstance();
+
+                w.bundle(function (err, src) {
+                    t.ifError(err);
+                    t.assert(src, 'rebundled');
+                    // :TRICKY: `src` can be undefined if rebundling didn't happen.
+                    t.notEqual((src || new Buffer('')).toString('utf8').indexOf('color:green'), -1);
+
+                    w.close();
+                    w.write();
+
+                    var cache = watchify.getCache(cacheFile);
+
+                    var lessOneRealPath = fs.realpathSync(lessOne);
+                    var lessTwoRealPath = fs.realpathSync(lessTwo);
+
+                    var expectedTransformDeps = {};
+                    expectedTransformDeps[lessOneRealPath] = [lessTwoRealPath];
+                    t.deepEqual(cache._transformDeps, expectedTransformDeps);
+
+                    t.assert(cache._files[lessOneRealPath], 'lessOne is cached');
+                    t.assert(cache._files[lessTwoRealPath], 'lessTwo is cached');
+                });
+            });
+        }, 1000);
     });
 });
 
