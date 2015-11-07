@@ -33,6 +33,7 @@ function watchify (b, opts) {
     var cache = b._options.cache || {};
     if (!cache._files) cache._files = {};
     if (!cache._time) cache._time = {};
+    if (!cache._transformDeps) cache._transformDeps = {};
     var invalid = false;
     var pkgcache = b._options.packageCache;
     var delay = typeof opts.delay === 'number' ? opts.delay : 600;
@@ -62,14 +63,25 @@ function watchify (b, opts) {
     /**
      * Walk through the dependency cache. If any dependency's modification time has changed, or the file has been
      * removed, invalidate the cache and remove the entry.
+     *
+     * If the file implicitly requires other files due to a transform, invalidate them.
+     * If the file is implicitly required as part of a transform, invalidate the files that require it.
      */
     function update() {
-        if (Object.keys(cache).length === 2) {
+        if (Object.keys(cache).length === 3) {
             invalid = true;
             return;
         } else {
             invalid = false;
         }
+
+        var transformDepsInverted = {};
+        Object.keys(cache._transformDeps).forEach(function(mfile) {
+            cache._transformDeps[mfile].forEach(function(dep) {
+                transformDepsInverted[dep] = transformDepsInverted[dep] || [];
+                transformDepsInverted[dep].push(mfile);
+            });
+        });
 
         Object.keys(cache._time).forEach(function(file) {
             try {
@@ -78,6 +90,13 @@ function watchify (b, opts) {
             if (!stats || cache._time[file] !== stats.mtime.getTime()) {
                 b.emit('log', 'Watchify cache: dep updated or removed: ' + path.basename(file));
                 cleanEntry(cache._files[file], file);
+
+                if (transformDepsInverted[file]) {
+                    transformDepsInverted[file].forEach(function(mfile) {
+                        cleanEntry(cache._files[mfile], mfile);
+                    });
+                }
+
                 invalid = true;
             }
         });
@@ -144,7 +163,19 @@ function watchify (b, opts) {
     var ignoredFiles = {};
 
     b.on('transform', function (tr, mfile) {
+        cleanDependencies(mfile);
         tr.on('file', function (dep) {
+            cache._transformDeps[mfile] = cache._transformDeps[mfile] || [];
+            cache._transformDeps[mfile].push(dep);
+
+            try {
+                var stats = fs.statSync(dep);
+            } catch (err) {}
+            if (stats) {
+                cache._files[dep] = dep;
+                cache._time[dep] = stats.mtime.getTime();
+            }
+
             watchFile(mfile, dep);
         });
     });
@@ -178,10 +209,22 @@ function watchify (b, opts) {
         fwatcherFiles[file].push(dep);
     }
 
+    function cleanDependencies(file) {
+        if (cache._transformDeps[file]) {
+            cache._transformDeps[file].forEach(function(dep) {
+                cleanEntry(cache._files[dep], dep);
+            });
+        }
+
+        delete cache._transformDeps[file];
+    }
+
     function cleanEntry(id, file) {
         delete cache._files[file];
         delete cache._time[file];
         delete cache[id];
+        cleanDependencies(file);
+
         return;
     }
 
@@ -257,7 +300,13 @@ function watchify (b, opts) {
             if (watch) {
                 setImmediate(function() {
                     Object.keys(cache).forEach(function(key) {
-                        if (key !== '_time' && key !== '_files') watchFile(key);
+                        if (key !== '_time' && key !== '_files' && key !== '_transformDeps') watchFile(key);
+                    });
+
+                    Object.keys(cache._transformDeps).forEach(function(mfile) {
+                        cache._transformDeps[mfile].forEach(function(dep) {
+                            watchFile(mfile, dep);
+                        });
                     });
                 });
                 // set to true, because we didn't actual bundle anything yet, but want this

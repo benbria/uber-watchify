@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "brfs": "^1.0.1",
+    "node-lessify": "0.0.11",
     "proxyquire": "^1.7.0",
     "split": "~0.3.0",
     "tape": "^2.12.3",
