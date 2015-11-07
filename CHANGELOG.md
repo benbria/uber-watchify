@@ -1,5 +1,8 @@
 # uber-watchify Changelog
 
+### v3.5.0
+  - merge PR #9: support caching of implicit transform dependencies
+
 ### v3.4.1
   - add `-n` and `--no-watch` to command line interface. (Omitted in code reset)
 
