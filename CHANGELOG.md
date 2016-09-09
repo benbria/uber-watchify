@@ -1,5 +1,8 @@
 # uber-watchify Changelog
 
+### v3.6.0
+  - merge PR #10: update browserify version
+
 ### v3.5.0
   - merge PR #9: support caching of implicit transform dependencies
 
