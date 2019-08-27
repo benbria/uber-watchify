@@ -37,7 +37,7 @@ test('bin brfs', function (t) {
             run(files.bundle, function (err, output) {
                 t.ifError(err);
                 t.equal(output, 'BEEP\nBOOP\n');
-                fs.writeFile(files.lines, 'robo-bOOgie');
+                fs.writeFileSync(files.lines, 'robo-bOOgie');
             })
         }
         else if (lineNum === 2) {
